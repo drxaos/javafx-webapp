@@ -1,23 +1,15 @@
 package test.fx;
 
+import java.util.Date;
+
 public class TestApp extends WebApp {
     public static void main(String[] args) {
         launch(args);
     }
 
     @Override
-    protected int getWidth() {
-        return 600;
-    }
-
-    @Override
-    protected int getHeight() {
-        return 600;
-    }
-
-    @Override
     protected String getStartUrl() {
-        return "http://google.com/";
+        return "webapp:///views/html/main.html";
     }
 
     @Override
@@ -26,7 +18,23 @@ public class TestApp extends WebApp {
     }
 
     @Override
+    protected void onAlert(String data) {
+        System.out.println("Alert: " + data);
+    }
+
+    @Override
     protected Object getAppBridge() {
-        return null;
+        return new AppBridge();
+    }
+
+    public static class AppBridge {
+        public String getUsername() {
+            return System.getProperty("user.name");
+        }
+
+        public String getTime() {
+            return new Date().toString();
+        }
     }
 }
+

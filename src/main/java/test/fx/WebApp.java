@@ -6,45 +6,82 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Worker.State;
+import javafx.event.EventHandler;
 import javafx.geometry.HPos;
+import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebHistory;
+import javafx.scene.web.*;
 import javafx.scene.web.WebHistory.Entry;
-import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import netscape.javascript.JSObject;
+
+import java.net.URL;
 
 
 abstract public class WebApp extends Application {
 
+    Browser browser;
+
     @Override
     public void start(Stage stage) {
-        stage.setTitle("Web Application");
-        stage.setScene(new Scene(new Browser(this), getWidth(), getHeight(), Color.web("#FFFFFF")));
+        stage.setTitle(getTitle());
+        stage.setScene(new Scene(browser = new Browser(this), getWidth(), getHeight(), Color.web("#F00")));
         stage.show();
     }
 
-    abstract protected int getWidth();
+    protected int getWidth() {
+        return 800;
+    }
 
-    abstract protected int getHeight();
+    protected int getHeight() {
+        return 600;
+    }
 
     abstract protected String getStartUrl();
 
-    abstract protected void onRelocate(String url);
+    protected String getUserAgent() {
+        return "TestApplication/0.1";
+    }
 
-    protected void onStateChanged(WebEngine webEngine, ObservableValue<? extends State> ov,
+    protected String getTitle() {
+        return "Test Application 0.1";
+    }
+
+    protected void onRelocate(String url) {
+    }
+
+    protected void onAlert(String data) {
+    }
+
+    protected void onError(String message, Throwable exception) {
+        System.out.println(message);
+        exception.printStackTrace();
+    }
+
+    protected void onResized(Rectangle2D bounds) {
+    }
+
+    protected void onStateChanged(ObservableValue<? extends State> ov,
                                   State oldState, State newState) {
         if (newState == State.SUCCEEDED) {
-            JSObject windowObject = (JSObject) webEngine.executeScript("window");
-            windowObject.setMember("app", getAppBridge());
+            JSObject windowObject = (JSObject) browser.webEngine.executeScript("window");
+            windowObject.setMember("appBridge", getAppBridge());
         }
     }
 
-    abstract protected Object getAppBridge();
+    protected Object getAppBridge() {
+        return null;
+    }
+
+    public JSObject evalJs(String js) {
+        if (browser.webEngine.getLoadWorker().getState() == State.SUCCEEDED) {
+            return (JSObject) browser.webEngine.executeScript(js);
+        }
+        return null;
+    }
 
 }
 
@@ -73,11 +110,33 @@ class Browser extends Region {
                     @Override
                     public void changed(ObservableValue<? extends State> ov,
                                         State oldState, State newState) {
-                        webApp.onStateChanged(webEngine, ov, oldState, newState);
+                        webApp.onStateChanged(ov, oldState, newState);
                     }
                 }
         );
 
+        webEngine.setUserAgent(webApp.getUserAgent());
+
+        webEngine.setOnAlert(new EventHandler<WebEvent<String>>() {
+            @Override
+            public void handle(WebEvent<String> event) {
+                webApp.onAlert(event.getData());
+            }
+        });
+        webEngine.setOnError(new EventHandler<WebErrorEvent>() {
+            @Override
+            public void handle(WebErrorEvent event) {
+                webApp.onError(event.getMessage(), event.getException());
+            }
+        });
+        webEngine.setOnResized(new EventHandler<WebEvent<Rectangle2D>>() {
+            @Override
+            public void handle(WebEvent<Rectangle2D> event) {
+                webApp.onResized(event.getData());
+            }
+        });
+
+        URL.setURLStreamHandlerFactory(new WebAppURLStreamHandlerFactory(webApp));
         webEngine.load(webApp.getStartUrl());
 
         getChildren().add(browser);
