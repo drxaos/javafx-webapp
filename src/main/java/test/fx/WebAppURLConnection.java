@@ -40,7 +40,16 @@ public class WebAppURLConnection extends URLConnection {
         URL url = getURL();
         String filePath = url.toExternalForm();
         filePath = filePath.startsWith("webapp://") ? filePath.substring("webapp://".length()) : filePath.substring("webapp:".length()); // attention: triple '/' is reduced to a single '/'
-        data = IOUtils.toByteArray(target.getClass().getResource(filePath).openConnection());
+        try {
+            URL resource = target.getClass().getResource(filePath);
+            if (resource != null) {
+                data = IOUtils.toByteArray(resource.openConnection());
+            } else {
+                data = new byte[0];
+            }
+        } catch (IOException e) {
+            data = new byte[0];
+        }
     }
 
     public OutputStream getOutputStream() throws IOException {

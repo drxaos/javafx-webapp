@@ -1,6 +1,7 @@
 package test.fx;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
@@ -12,6 +13,7 @@ import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.web.*;
 import javafx.scene.web.WebHistory.Entry;
@@ -26,10 +28,16 @@ abstract public class WebApp extends Application {
     Browser browser;
 
     @Override
-    public void start(Stage stage) {
-        stage.setTitle(getTitle());
-        stage.setScene(new Scene(browser = new Browser(this), getWidth(), getHeight(), Color.web("#F00")));
-        stage.show();
+    public void start(final Stage stage) {
+        final WebApp app = this;
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                stage.setTitle(getTitle());
+                stage.setScene(new Scene(browser = new Browser(app), getWidth(), getHeight(), Color.web("#F00")));
+                stage.show();
+            }
+        });
     }
 
     protected int getWidth() {
@@ -41,10 +49,6 @@ abstract public class WebApp extends Application {
     }
 
     abstract protected String getStartUrl();
-
-    protected String getUserAgent() {
-        return "TestApplication/0.1";
-    }
 
     protected String getTitle() {
         return "Test Application 0.1";
@@ -115,20 +119,18 @@ class Browser extends Region {
                 }
         );
 
-        webEngine.setUserAgent(webApp.getUserAgent());
-
         webEngine.setOnAlert(new EventHandler<WebEvent<String>>() {
             @Override
             public void handle(WebEvent<String> event) {
                 webApp.onAlert(event.getData());
             }
         });
-        webEngine.setOnError(new EventHandler<WebErrorEvent>() {
-            @Override
-            public void handle(WebErrorEvent event) {
-                webApp.onError(event.getMessage(), event.getException());
-            }
-        });
+//        webEngine.setOnError(new EventHandler<WebErrorEvent>() {
+//            @Override
+//            public void handle(WebErrorEvent event) {
+//                webApp.onError(event.getMessage(), event.getException());
+//            }
+//        });
         webEngine.setOnResized(new EventHandler<WebEvent<Rectangle2D>>() {
             @Override
             public void handle(WebEvent<Rectangle2D> event) {
